@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>QRIS Monitoring Report</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+    background:#edf1f7;
+    padding:20px;
+    overflow-x: hidden; 
+    overflow-y: hidden; /* Mengunci halaman utama agar tidak muncul scrollbar ganda */
+}
+
+/* WRAPPER UTAMA */
+.wrapper{
+    width:100%;
+    max-width:2300px; 
+    margin:auto;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+/* TOOLBAR SIDEBAR KIRI */
+.toolbar{
+    display:flex;
+    flex-direction: column; 
+    gap:10px;
+    position: sticky; 
+    top: 20px;
+    width: 200px; 
+    flex-shrink: 0;
+    z-index: 10;
+}
+
+button{
+    border:none;
+    padding:15px 20px; 
+    border-radius:20px;
+    cursor:pointer;
+    color:white;
+    font-size:16px;
+    font-weight:900;
+    transition:.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+    width: 100%; 
+    text-align: center;
+}
+
+button:hover{
+    transform:translateY(-2px);
+}
+
+.generate-btn{
+    background: linear-gradient(90deg, #005eff, #ff9800);
+}
+
+.copy-btn{
+    background: linear-gradient(90deg, #00a63e, #00d26a);
+}
+
+/* CONTAINER PREVIEW PEMBATAS SKALA MONITOR */
+.report-container {
+    width: 1920px;
+    height: 1080px;
+    flex-shrink: 0;
+    zoom: calc((100vw - 300px) / 1920);
+}
+
+/* RESPONSIVE KHUSUS LAPTOP */
+@media (max-width: 1400px) and (max-height: 800px) {
+    body { padding: 15px; }
+    .toolbar { top: 15px; width: 200px; }
+    .report-container { zoom: 0.51; }
+}
+
+@media (min-width: 2240px) {
+    .report-container { zoom: 1; }
+}
+
+/* RESOLUSI REAL LAPORAN FULL HD 16:9 */
+.report{
+    width: 1920px;
+    height: 1080px;
+    background:white;
+    border-radius:28px;
+    overflow:hidden;
+    box-shadow: 0 10px 35px rgba(0,0,0,.15);
+    display: flex;
+    flex-direction: column;
+}
+
+/* HEADER */
+.header{
+    position:relative;
+    background: linear-gradient(90deg, #002f87 0%, #005dff 45%, #ff9800 100%);
+    color:white;
+    overflow:hidden;
+    padding: 25px 40px 65px; 
+    flex-shrink: 0;
+}
+
+.header::before{
+    content:'';
+    position:absolute;
+    left:-5%;
+    bottom:-170px;
+    width:110%;
+    height:230px;
+    background:white;
+    border-radius:50%;
+    z-index: 1;
+}
+
+.topbar{
+    position:relative;
+    z-index:2;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    width: 100%;
+}
+
+.qris-logo-container {
+    display: inline-flex;
+    align-items: center; 
+    gap: 12px; 
+    text-transform: uppercase;
+    user-select: none;
+}
+
+.qris-main-text {
+    font-family: "Arial Black", Arial, Helvetica, sans-serif;
+    font-size: 75px; 
+    font-weight: 900;
+    letter-spacing: -3px; 
+    color: #ffffff; 
+    margin: 0;
+    padding: 0;
+    line-height: 0.8;
+}
+
+.qris-sub-text-side {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-left: 3px solid #ffffff; 
+    padding-left: 10px;
+    text-align: left;
+    line-height: 1.2;
+}
+
+.qris-sub-line1, .qris-sub-line2 {
+    font-size: 21px;
+    font-weight: bold;
+	font-style:italic;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+}
+
+.ranger{
+    text-align:right;
+    font-size:48px;
+    font-style:italic;
+    font-weight:900;
+    line-height:1;
+}
+
+.ranger small{
+    display:block;
+    margin-top:4px;
+    font-size:15px;
+    letter-spacing:0.5px;
+}
+
+.main-title{
+    position:relative;
+    z-index:2;
+    margin-top: 10px;
+    text-align:center;
+    font-size:62px;
+    font-weight:900;
+    letter-spacing:1px;
+    text-shadow: 0 6px 15px rgba(0,0,0,.3);
+}
+
+.datetime{
+    position:relative;
+    z-index:2;
+    width:max-content;
+    margin:auto;
+    margin-top: 2px;
+    padding: 8px 35px;
+    border-radius:50px;
+    border: 2px solid rgba(255,255,255,.4);
+    background: rgba(255,255,255,.12);
+    backdrop-filter:blur(6px);
+    font-size:24px;
+    font-weight:900;
+}
+
+/* CONTENT BOX */
+.content{
+    padding: 20px 40px;
+    background:#f7f8fc;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; 
+}
+
+.cards{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+}
+
+.card{
+    position:relative;
+    background:white;
+    border-radius:20px;
+    padding:20px 30px;
+    overflow:hidden;
+    border:2px solid #dfdfdf;
+    box-shadow: 0 4px 12px rgba(0,0,0,.06);
+}
+
+.card::after{
+    content:'';
+    position:absolute;
+    right:-60px;
+    bottom:-60px;
+    width:220px;
+    height:220px;
+    border-radius:50%;
+    background: linear-gradient(180deg, #005eff, #ffb300);
+    opacity:.1;
+}
+
+.card-title{
+    width:max-content;
+    margin:auto;
+    margin-bottom:15px;
+    padding: 6px 30px;
+    border-radius:12px;
+    background: linear-gradient(180deg, #ffb300, #ff6d00);
+    color:white;
+    font-size:26px;
+    font-weight:900;
+    box-shadow: 0 4px 10px rgba(255,153,0,.3);
+}
+
+.card-body{
+    display:flex;
+    justify-content:space-between;
+    gap:20px;
+}
+
+.metric{
+    flex:1;
+    text-align:center;
+}
+
+.metric-title{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    margin-bottom:8px;
+    color:#10206e;
+    font-size:25px;
+    font-weight:900;
+    letter-spacing:.5px;
+    text-transform:uppercase;
+}
+
+.metric-value{
+    font-size:60px;
+    line-height:1;
+    font-weight:900;
+    color:#10206e;
+}
+
+.metric-rp{
+    font-size:46px;
+}
+
+.icon-blue, .icon-orange, .icon-green{
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    font-size:18px;
+    font-weight:900;
+}
+
+.icon-blue{ background: linear-gradient(180deg, #005eff, #002f87); }
+.icon-orange{ background: linear-gradient(180deg, #ffb300, #ff6d00); }
+.icon-green{ background: linear-gradient(180deg, #12b63d, #0d8b2d); }
+
+.diff-box{
+    background:white;
+    border-radius:20px;
+    padding:18px;
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.06);
+}
+
+.diff-item{
+    position:relative;
+    text-align:center;
+}
+
+.diff-item:not(:last-child)::after{
+    content:'';
+    position:absolute;
+    top:10px;
+    right:-10px;
+    width:2px;
+    height:60px;
+    background:#d7d7d7;
+}
+
+.diff-title{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin-bottom:8px;
+    color:#10206e;
+    font-size:23px;
+    font-weight:900;
+    text-transform:uppercase;
+}
+
+.diff-value{
+    font-size:50px;
+    font-weight:900;
+    color:#10206e;
+}
+
+.status-box{
+    background:white;
+    border-radius:20px;
+    border:3px solid #6bc46b;
+    padding:10px 170px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:100px;
+}
+
+.status-left{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.status-icon{
+    width:60px;
+    height:60px;
+    border-radius:50%;
+    background: linear-gradient(180deg, #12b63d, #0b8d2d);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    font-size:35px;
+    font-weight:900;
+}
+
+.status-title{
+    font-size:18px;
+    font-weight:900;
+    color:#222;
+    margin-bottom:2px;
+}
+
+.status-text{
+    font-size:45px;
+    line-height:1;
+    font-weight:900;
+}
+
+.aman{ color:#0f9d32; }
+.tidakaman{ color:#d60000; }
+
+.status-desc{
+    max-width:1050px;
+    font-size:20px;
+    line-height:1.4;
+    font-weight:800;
+    color:#333;
+}
+
+.info-box{
+    background:white;
+    border-radius:20px;
+    padding:15px 30px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.06);
+}
+
+.info-title{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:8px;
+    color:#17348f;
+    font-size:22px;
+    font-weight:900;
+}
+
+.info-list{
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+}
+
+.info-item{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    font-size:18px;
+    line-height:1.4;
+    font-weight:700;
+    color:#333;
+    text-transform:uppercase;
+}
+
+.footer{
+    background: linear-gradient(90deg, #002f87, #ff9800);
+    color:white;
+    text-align:center;
+    padding:17px;
+    border-radius:16px;
+    font-size:22px;
+    font-weight:900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+
+    <div class="toolbar">
+        <button class="generate-btn" onclick="generateData()">GENERATE DATA</button>
+        <button class="copy-btn" onclick="copyImage()">COPY IMAGE</button>
+    </div>
+
+    <div class="report-container">
+        <div class="report" id="capture">
+
+            <div class="header">
+                <div class="topbar">
+                    <div class="qris-logo-container">
+                        <h1 class="qris-main-text">QRIS</h1>
+                        <div class="qris-sub-text-side">
+                            <div class="qris-sub-line1">QR Code Standard</div>
+                            <div class="qris-sub-line2">Pembayaran Nasional</div>
+                        </div>
+                    </div>
+
+                    <div class="ranger">
+                        RANGER+
+                        <small>SENSE EARLY — MOVE FASTER — WIN AHEAD</small>
+                    </div>
+                </div>
+
+                <div class="main-title">QRIS MONITORING REPORT</div>
+                <div class="datetime" id="datetime">LOADING...</div>
+            </div>
+
+            <div class="content">
+
+                <div class="cards">
+                    <div class="card">
+                        <div class="card-title">SPEEDCASH</div>
+                        <div class="card-body">
+                            <div class="metric">
+                                <div class="metric-title">JUMLAH TOTAL TRANSAKSI</div>
+                                <div class="metric-value" id="b4">0</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-title">JUMLAH TOTAL AMOUNT</div>
+                                <div class="metric-value metric-rp" id="b5">Rp 0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">WINPAY</div>
+                        <div class="card-body">
+                            <div class="metric">
+                                <div class="metric-title">JUMLAH TOTAL TRANSAKSI</div>
+                                <div class="metric-value" id="b8">0</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-title">JUMLAH TOTAL AMOUNT</div>
+                                <div class="metric-value metric-rp" id="b9">Rp 0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="diff-box">
+                    <div class="diff-item">
+                        <div class="diff-title">
+                            <div class="icon-orange">📊</div>SELISIH TRANSAKSI (SC - WP)
+                        </div>
+                        <div class="diff-value" id="selisihTransaksi">0</div>
+                    </div>
+
+                    <div class="diff-item">
+                        <div class="diff-title">
+                            <div class="icon-blue">💰</div>SELISIH AMOUNT (SC - WP)
+                        </div>
+                        <div class="diff-value" id="selisihAmount">Rp 0</div>
+                    </div>
+
+                    <div class="diff-item">
+                        <div class="diff-title">
+                            <div class="icon-green">📈</div>PERSENTASE SELISIH
+                        </div>
+                        <div class="diff-value" id="persentase">0%</div>
+                    </div>
+                </div>
+
+                <div class="status-box">
+                    <div class="status-left">
+                        <div class="status-icon">✓</div>
+                        <div>
+                            <div class="status-title">STATUS VALIDASI</div>
+                            <div class="status-text aman" id="statusText">AMAN</div>
+                        </div>
+                    </div>
+                    <div class="status-desc" id="statusDesc">
+                        JUMLAH TRANSAKSI QRIS ANTARA CPANEL SC DAN CPANEL WP MASIH DALAM KATEGORI AMAN / WAJAR.
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <div class="info-title">📋 KETERANGAN</div>
+                    <div class="info-list">
+                        <div class="info-item"><span>✅ Jika jumlah transaksi QRIS SC dan WP sama bisa dikategorikan "AMAN".</span></div>
+                        <div class="info-item"><span>✅ Jika jumlah transaksi QRIS di Cpanel SC lebih banyak (tidak berbeda jauh) masih dalam kategori "aman" / wajar.</span></div>
+                        <div class="info-item"><span>❌ Jika jumlah transaksi QRIS di Cpanel WP lebih banyak masuk kategori "tidak aman" highrisk.</span></div>
+                    </div>
+                </div>
+
+                <div class="footer" id="footerTime">
+                    LAPORAN DIHASILKAN OTOMATIS DARI SISTEM QRIS MONITORING
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+// MENGGUNAKAN GOOGLE VISUALIZATION API RESMI (AKURAT & ANTI-CORS DI NETLIFY)
+const SHEET_ID = '1ESHhGJY32qC7fSFLx8HoDwGdYu2XA94mCPFEkTQCp0w';
+const SHEET_NAME = 'qris%20malam';
+const GOOGLE_JSON_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}&_=${new Date().getTime()}`;
+
+function formatNumber(value){
+    return Number(value).toLocaleString('id-ID');
+}
+
+function formatCurrency(value){
+    return 'Rp ' + Number(value).toLocaleString('id-ID');
+}
+
+// Fungsi pembaca angka yang aman dari karakter titik/koma/simbol Rp bawaan GSheet
+function cleanNumber(val) {
+    if (val === null || val === undefined) return 0;
+    let str = String(val).replace(/[^0-9]/g, '');
+    return str ? Number(str) : 0;
+}
+
+async function generateData(){
+    try{
+        const response = await fetch(GOOGLE_JSON_URL, { cache: 'no-store' });
+        const text = await response.text();
+        
+        // Google gviz API mengembalikan teks bungkus "google.visualization.Query.setResponse(...)"
+        // Kita bersihkan bungkusnya agar menjadi JSON murni yang bisa dibaca JavaScript
+        const rawJson = JSON.parse(text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1));
+        const rows = rawJson.table.rows;
+
+        // =========================================================================
+        // AMBIL DATA KOTAK TANGGAL DARI SEL A1 (Baris 0, Kolom 0)
+        // =========================================================================
+        const dataA1 = rows[0]?.c[0]?.v || 'DATA TANGGAL KOSONG';
+        const cleanA1 = String(dataA1).toUpperCase();
+
+        document.getElementById('datetime').innerHTML = cleanA1;
+        document.getElementById('footerTime').innerHTML = `LAPORAN DIHASILKAN OTOMATIS DARI SISTEM QRIS MONITORING | ${cleanA1}`;
+
+        // =========================================================================
+        // EKSTRAKSI BARIS DATA KOLOM B (Kolom ke-2, indeks array = 1)
+        // =========================================================================
+        // c[1] artinya membaca isi Kolom B. .v artinya value asli, .f artinya nilai terformat.
+        const B4 = cleanNumber(rows[3]?.c[1]?.v); // Baris 4
+        const B5 = cleanNumber(rows[4]?.c[1]?.v); // Baris 5
+        const B8 = cleanNumber(rows[7]?.c[1]?.v); // Baris 8
+        const B9 = cleanNumber(rows[8]?.c[1]?.v); // Baris 9
+
+        // TAMPILKAN KE SCREEN HTML
+        document.getElementById('b4').innerHTML = formatNumber(B4);
+        document.getElementById('b5').innerHTML = formatCurrency(B5);
+        document.getElementById('b8').innerHTML = formatNumber(B8);
+        document.getElementById('b9').innerHTML = formatCurrency(B9);
+
+        // HITUNG SELISIH & PERSENTASE
+        const selisihTransaksi = Math.abs(B4 - B8);
+        const selisihAmount = Math.abs(B5 - B9);
+        const persen = B4 > 0 ? ((selisihTransaksi / B4) * 100).toFixed(2) : 0;
+
+        document.getElementById('selisihTransaksi').innerHTML = formatNumber(selisihTransaksi);
+        document.getElementById('selisihAmount').innerHTML = formatCurrency(selisihAmount);
+        document.getElementById('persentase').innerHTML = persen + '%';
+
+        // EVALUASI LOGIKA VALIDASI STATUS
+        const statusText = document.getElementById('statusText');
+        const statusDesc = document.getElementById('statusDesc');
+
+        if(B8 > B4 && selisihTransaksi > 20){
+            statusText.innerHTML = 'HIGH RISK';
+            statusText.className = 'status-text tidakaman';
+            statusDesc.innerHTML = 'JUMLAH TRANSAKSI QRIS DI CPANEL WP LEBIH BANYAK DAN MASUK KATEGORI TIDAK AMAN / HIGHRISK.';
+        } else {
+            statusText.innerHTML = 'AMAN';
+            statusText.className = 'status-text aman';
+            statusDesc.innerHTML = 'JUMLAH TRANSAKSI QRIS ANTARA CPANEL SC DAN CPANEL WP MASIH DALAM KATEGORI AMAN / WAJAR.';
+        }
+
+    } catch(error){
+        console.error("Gagal menarik data JSON dari Google Sheet:", error);
+    }
+}
+
+/* FUNGSI COPY IMAGE (FIXED ANTI-TUMPUK & ANTI-POTONG) */
+async function copyImage(){
+    const container = document.querySelector('.report-container');
+    const capture = document.getElementById('capture');
+    
+    const computedStyle = window.getComputedStyle(container);
+    const originalZoom = container.style.zoom || computedStyle.zoom || "1";
+    
+    // Normalisasi skala tampilan sementara agar koordinat jepretan presisi penuh
+    container.style.zoom = "1";
+    await new Promise(resolve => setTimeout(resolve, 60));
+
+    try {
+        const canvas = await html2canvas(capture, {
+            scale: 2, 
+            useCORS: true,
+            width: 1920,
+            height: 1080,
+            logging: false
+        });
+
+        canvas.toBlob(async (blob) => {
+            if(blob) {
+                try {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({'image/png': blob})
+                    ]);
+                    alert('Sukses! Laporan Full HD berhasil disalin ke clipboard Anda.');
+                } catch (clipErr) {
+                    alert("Gagal otomatis menyalin. Izinkan akses clipboard pada browser.");
+                }
+            }
+        }, 'image/png');
+        
+    } catch (error) {
+        alert("Terjadi gangguan sistem pemrosesan gambar.");
+    } finally {
+        // Kembalikan rasio layar ke bentuk semula secara otomatis
+        container.style.zoom = originalZoom;
+    }
+}
+
+// LOAD DATA OTOMATIS SETIAP KALI HALAMAN DIBUKA
+generateData();
+
+</script>
+
+</body>
+</html>
