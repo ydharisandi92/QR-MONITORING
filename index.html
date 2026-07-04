@@ -21,10 +21,9 @@ body{
     background:#edf1f7;
     padding:20px;
     overflow-x: hidden; 
-    overflow-y: hidden; /* Mengunci halaman utama agar tidak muncul scrollbar ganda */
+    overflow-y: hidden;
 }
 
-/* WRAPPER UTAMA */
 .wrapper{
     width:100%;
     max-width:2300px; 
@@ -35,7 +34,6 @@ body{
     gap: 20px;
 }
 
-/* TOOLBAR SIDEBAR KIRI */
 .toolbar{
     display:flex;
     flex-direction: column; 
@@ -73,7 +71,6 @@ button:hover{
     background: linear-gradient(90deg, #00a63e, #00d26a);
 }
 
-/* CONTAINER PREVIEW PEMBATAS SKALA MONITOR */
 .report-container {
     width: 1920px;
     height: 1080px;
@@ -81,7 +78,6 @@ button:hover{
     zoom: calc((100vw - 300px) / 1920);
 }
 
-/* RESPONSIVE KHUSUS LAPTOP (Kunci zoom agar tidak rusak kinerjanya) */
 @media (max-width: 1400px) and (max-height: 800px) {
     body { padding: 15px; }
     .toolbar { top: 15px; width: 200px; }
@@ -92,7 +88,6 @@ button:hover{
     .report-container { zoom: 1; }
 }
 
-/* RESOLUSI REAL LAPORAN FULL HD 16:9 */
 .report{
     width: 1920px;
     height: 1080px;
@@ -104,7 +99,6 @@ button:hover{
     flex-direction: column;
 }
 
-/* HEADER */
 .header{
     position:relative;
     background: linear-gradient(90deg, #002f87 0%, #005dff 45%, #ff9800 100%);
@@ -213,7 +207,6 @@ button:hover{
     font-weight:900;
 }
 
-/* CONTENT BOX */
 .content{
     padding: 20px 40px;
     background:#f7f8fc;
@@ -447,7 +440,7 @@ button:hover{
 }
 
 .info-item span{
-    text-transform: none; /* Menjaga agar teks keterangan tidak ikut menjadi kapital penuh */
+    text-transform: none;
 }
 
 .footer{
@@ -586,7 +579,6 @@ button:hover{
 
 <script>
 
-// MENGGUNAKAN GID SPESIFIK AGAR TIDAK SALAH BACA HALAMAN TAB LAIN
 const SHEET_ID = '1ESHhGJY32qC7fSFLx8HoDwGdYu2XA94mCPFEkTQCp0w';
 const GID = '1212559783'; 
 const GOOGLE_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}&_=${new Date().getTime()}`;
@@ -610,7 +602,7 @@ function updateDateTime(){
     document.getElementById('footerTime').innerHTML = footerString.toUpperCase();
 }
 
-// Fungsi Parser CSV Khusus Mengatasi Tanda Kutip & Pemisah Koma Google Data
+// Fungsi Parser CSV yang membersihkan kutipan berlebih
 function parseCSV(csvText) {
     const lines = csvText.split('\n');
     return lines.map(line => {
@@ -618,14 +610,24 @@ function parseCSV(csvText) {
     });
 }
 
-// Fungsi pembantu untuk memotong pecahan desimal .00 sebelum dibersihkan karakternya
+// Fungsi Pembersih Angka Desimal & Karakter Non-Digit Aman
 function cleanCellValue(cellText) {
     if (!cellText) return 0;
-    // Mengambil bagian sebelum tanda titik pecahan desimal agar .00 tidak digabungkan
     let cleanText = cellText.split('.')[0];
-    // Hapus semua karakter selain angka murni
     cleanText = cleanText.replace(/[^\d]/g, '');
     return Number(cleanText) || 0;
+}
+
+// ROMBAK TOTAL: Mencari data berdasarkan teks kunci di kolom A secara dinamis
+function getValueByLabel(rows, labelText) {
+    const target = labelText.toLowerCase().replace(/\s+/g, '');
+    for (let i = 0; i < rows.length; i++) {
+        const cellA = String(rows[i]?.[0] || '').toLowerCase().replace(/\s+/g, '');
+        if (cellA.includes(target)) {
+            return cleanCellValue(rows[i]?.[1]);
+        }
+    }
+    return 0;
 }
 
 async function generateData(){
@@ -634,11 +636,11 @@ async function generateData(){
         const csvText = await response.text();
         const rows = parseCSV(csvText);
 
-        // Parsing data baris menggunakan fungsi pembersih yang baru
-        const B4 = cleanCellValue(rows[3]?.[1]);
-        const B5 = cleanCellValue(rows[4]?.[1]);
-        const B8 = cleanCellValue(rows[7]?.[1]);
-        const B9 = cleanCellValue(rows[8]?.[1]);
+        // Pencarian nilai berbasis Label Text (Sangat aman dari pergeseran baris)
+        const B4 = getValueByLabel(rows, 'jumlah total Transaksi QRIS WP di SC=');
+        const B5 = getValueByLabel(rows, 'jumlah total Amount QRIS WP di SC =');
+        const B8 = getValueByLabel(rows, 'jumlah total Transaksi QRIS WP di WP=');
+        const B9 = getValueByLabel(rows, 'jumlah total Amount QRIS WP di WP =');
 
         // DISPLAY DATA UTAMA
         document.getElementById('b4').innerHTML = formatNumber(B4);
@@ -675,7 +677,6 @@ async function generateData(){
     }
 }
 
-/* FUNGSI SALIN GAMBAR DENGAN ATURAN PENUNDAAN SEMENTARA (ANTI-OVERLAP TEKS) */
 async function copyImage(){
     const container = document.querySelector('.report-container');
     const capture = document.getElementById('capture');
@@ -683,9 +684,7 @@ async function copyImage(){
     const computedStyle = window.getComputedStyle(container);
     const originalZoom = container.style.zoom || computedStyle.zoom || "1";
     
-    // Nonaktifkan zoom sementara agar koordinat jepretan kembali murni 100%
     container.style.zoom = "1";
-    // Jeda 50 milidetik agar browser merender bentuk lurus murninya
     await new Promise(resolve => setTimeout(resolve, 50));
 
     try {
@@ -713,12 +712,10 @@ async function copyImage(){
     } catch (error) {
         alert("Terjadi kesalahan sistem pengolahan gambar.");
     } finally {
-        // Kembalikan ke rasio laptop semula secara instan
         container.style.zoom = originalZoom;
     }
 }
 
-// JALANKAN OTOMATIS SAAT HALAMAN DIBUKA
 generateData();
 
 </script>
