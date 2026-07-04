@@ -446,6 +446,10 @@ button:hover{
     text-transform:uppercase;
 }
 
+.info-item span{
+    text-transform: none; /* Menjaga agar teks keterangan tidak ikut menjadi kapital penuh */
+}
+
 .footer{
     background: linear-gradient(90deg, #002f87, #ff9800);
     color:white;
@@ -582,10 +586,10 @@ button:hover{
 
 <script>
 
-// JALUR INDEPENDEN TEMBAK JALUR CSV GSHEET (DIPASTIKAN AMAN DI DEPLOY NETLIFY)
+// MENGGUNAKAN GID SPESIFIK AGAR TIDAK SALAH BACA HALAMAN TAB LAIN
 const SHEET_ID = '1ESHhGJY32qC7fSFLx8HoDwGdYu2XA94mCPFEkTQCp0w';
-const SHEET_NAME = 'qris%20malam';
-const GOOGLE_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${SHEET_NAME}&_=${new Date().getTime()}`;
+const GID = '1212559783'; 
+const GOOGLE_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}&_=${new Date().getTime()}`;
 
 function formatNumber(value){
     return Number(value).toLocaleString('id-ID');
@@ -614,17 +618,27 @@ function parseCSV(csvText) {
     });
 }
 
+// Fungsi pembantu untuk memotong pecahan desimal .00 sebelum dibersihkan karakternya
+function cleanCellValue(cellText) {
+    if (!cellText) return 0;
+    // Mengambil bagian sebelum tanda titik pecahan desimal agar .00 tidak digabungkan
+    let cleanText = cellText.split('.')[0];
+    // Hapus semua karakter selain angka murni
+    cleanText = cleanText.replace(/[^\d]/g, '');
+    return Number(cleanText) || 0;
+}
+
 async function generateData(){
     try{
         const response = await fetch(GOOGLE_CSV_URL, { cache: 'no-store' });
         const csvText = await response.text();
         const rows = parseCSV(csvText);
 
-        // Koordinat Baris Data Berdasarkan Bentuk Asli Isi Spreadsheet Anda (Indeks Array JS dimulai dari 0)
-        const B4 = Number(String(rows[3]?.[1] || 0).replace(/[^\d]/g,''));
-        const B5 = Number(String(rows[4]?.[1] || 0).replace(/[^\d]/g,''));
-        const B8 = Number(String(rows[7]?.[1] || 0).replace(/[^\d]/g,''));
-        const B9 = Number(String(rows[8]?.[1] || 0).replace(/[^\d]/g,''));
+        // Parsing data baris menggunakan fungsi pembersih yang baru
+        const B4 = cleanCellValue(rows[3]?.[1]);
+        const B5 = cleanCellValue(rows[4]?.[1]);
+        const B8 = cleanCellValue(rows[7]?.[1]);
+        const B9 = cleanCellValue(rows[8]?.[1]);
 
         // DISPLAY DATA UTAMA
         document.getElementById('b4').innerHTML = formatNumber(B4);
