@@ -699,13 +699,6 @@ async function generateData(){
             statusIcon.className = 'status-icon bg-tidakaman';
             statusBox.style.borderColor = '#d60000';
             statusDesc.innerHTML = 'JUMLAH TRANSAKSI QRIS DI CPANEL WP LEBIH BANYAK DAN MASUK KATEGORI TIDAK AMAN / HIGHRISK.';
-        } else (Number(B8) < Number(B4) && Number(selisihTransaksi) > 20) {
-            statusText.innerHTML = 'HIGH RISK';
-            statusText.className = 'status-text tidakaman';
-            statusIcon.innerHTML = '✕';
-            statusIcon.className = 'status-icon bg-tidakaman';
-            statusBox.style.borderColor = '#d60000';
-            statusDesc.innerHTML = 'JUMLAH TRANSAKSI QRIS DI CPANEL SC LEBIH BANYAK DAN MASUK KATEGORI TIDAK AMAN / HIGHRISK.';
         } else {
             statusText.innerHTML = 'AMAN';
             statusText.className = 'status-text aman';
