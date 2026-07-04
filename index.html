@@ -81,7 +81,7 @@ button:hover{
     zoom: calc((100vw - 300px) / 1920);
 }
 
-/* RESPONSIVE KHUSUS LAPTOP */
+/* RESPONSIVE KHUSUS LAPTOP (Kunci zoom agar tidak rusak kinerjanya) */
 @media (max-width: 1400px) and (max-height: 800px) {
     body { padding: 15px; }
     .toolbar { top: 15px; width: 200px; }
@@ -582,10 +582,10 @@ button:hover{
 
 <script>
 
-// MENGGUNAKAN GOOGLE VISUALIZATION API RESMI (AKURAT & ANTI-CORS DI NETLIFY)
+// JALUR INDEPENDEN TEMBAK JALUR CSV GSHEET (DIPASTIKAN AMAN DI DEPLOY NETLIFY)
 const SHEET_ID = '1ESHhGJY32qC7fSFLx8HoDwGdYu2XA94mCPFEkTQCp0w';
 const SHEET_NAME = 'qris%20malam';
-const GOOGLE_JSON_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}&_=${new Date().getTime()}`;
+const GOOGLE_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${SHEET_NAME}&_=${new Date().getTime()}`;
 
 function formatNumber(value){
     return Number(value).toLocaleString('id-ID');
@@ -595,48 +595,44 @@ function formatCurrency(value){
     return 'Rp ' + Number(value).toLocaleString('id-ID');
 }
 
-// Fungsi pembaca angka yang aman dari karakter titik/koma/simbol Rp bawaan GSheet
-function cleanNumber(val) {
-    if (val === null || val === undefined) return 0;
-    let str = String(val).replace(/[^0-9]/g, '');
-    return str ? Number(str) : 0;
+function updateDateTime(){
+    const now = new Date();
+    const dateText = now.toLocaleDateString('id-ID', {day:'2-digit', month:'long', year:'numeric'}).toUpperCase();
+    const timeText = now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}).replace('.', ':');
+
+    document.getElementById('datetime').innerHTML = `${dateText} | ${timeText} WIB`;
+    
+    const footerString = `Laporan ini dihasilkan otomatis dari sistem QRIS Monitoring | Data per ${dateText} ${timeText} WIB`;
+    document.getElementById('footerTime').innerHTML = footerString.toUpperCase();
+}
+
+// Fungsi Parser CSV Khusus Mengatasi Tanda Kutip & Pemisah Koma Google Data
+function parseCSV(csvText) {
+    const lines = csvText.split('\n');
+    return lines.map(line => {
+        return line.split(',').map(cell => cell.replace(/^"(.*)"$/, '$1').trim());
+    });
 }
 
 async function generateData(){
     try{
-        const response = await fetch(GOOGLE_JSON_URL, { cache: 'no-store' });
-        const text = await response.text();
-        
-        // Google gviz API mengembalikan teks bungkus "google.visualization.Query.setResponse(...)"
-        // Kita bersihkan bungkusnya agar menjadi JSON murni yang bisa dibaca JavaScript
-        const rawJson = JSON.parse(text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1));
-        const rows = rawJson.table.rows;
+        const response = await fetch(GOOGLE_CSV_URL, { cache: 'no-store' });
+        const csvText = await response.text();
+        const rows = parseCSV(csvText);
 
-        // =========================================================================
-        // AMBIL DATA KOTAK TANGGAL DARI SEL A1 (Baris 0, Kolom 0)
-        // =========================================================================
-        const dataA1 = rows[0]?.c[0]?.v || 'DATA TANGGAL KOSONG';
-        const cleanA1 = String(dataA1).toUpperCase();
+        // Koordinat Baris Data Berdasarkan Bentuk Asli Isi Spreadsheet Anda (Indeks Array JS dimulai dari 0)
+        const B4 = Number(String(rows[3]?.[1] || 0).replace(/[^\d]/g,''));
+        const B5 = Number(String(rows[4]?.[1] || 0).replace(/[^\d]/g,''));
+        const B8 = Number(String(rows[7]?.[1] || 0).replace(/[^\d]/g,''));
+        const B9 = Number(String(rows[8]?.[1] || 0).replace(/[^\d]/g,''));
 
-        document.getElementById('datetime').innerHTML = cleanA1;
-        document.getElementById('footerTime').innerHTML = `LAPORAN DIHASILKAN OTOMATIS DARI SISTEM QRIS MONITORING | ${cleanA1}`;
-
-        // =========================================================================
-        // EKSTRAKSI BARIS DATA KOLOM B (Kolom ke-2, indeks array = 1)
-        // =========================================================================
-        // c[1] artinya membaca isi Kolom B. .v artinya value asli, .f artinya nilai terformat.
-        const B4 = cleanNumber(rows[3]?.c[1]?.v); // Baris 4
-        const B5 = cleanNumber(rows[4]?.c[1]?.v); // Baris 5
-        const B8 = cleanNumber(rows[7]?.c[1]?.v); // Baris 8
-        const B9 = cleanNumber(rows[8]?.c[1]?.v); // Baris 9
-
-        // TAMPILKAN KE SCREEN HTML
+        // DISPLAY DATA UTAMA
         document.getElementById('b4').innerHTML = formatNumber(B4);
         document.getElementById('b5').innerHTML = formatCurrency(B5);
         document.getElementById('b8').innerHTML = formatNumber(B8);
         document.getElementById('b9').innerHTML = formatCurrency(B9);
 
-        // HITUNG SELISIH & PERSENTASE
+        // FORMULA SELISIH & PERSENTASE
         const selisihTransaksi = Math.abs(B4 - B8);
         const selisihAmount = Math.abs(B5 - B9);
         const persen = B4 > 0 ? ((selisihTransaksi / B4) * 100).toFixed(2) : 0;
@@ -645,7 +641,7 @@ async function generateData(){
         document.getElementById('selisihAmount').innerHTML = formatCurrency(selisihAmount);
         document.getElementById('persentase').innerHTML = persen + '%';
 
-        // EVALUASI LOGIKA VALIDASI STATUS
+        // LOGIKA KONDISI VALIDASI STATUS
         const statusText = document.getElementById('statusText');
         const statusDesc = document.getElementById('statusDesc');
 
@@ -659,12 +655,13 @@ async function generateData(){
             statusDesc.innerHTML = 'JUMLAH TRANSAKSI QRIS ANTARA CPANEL SC DAN CPANEL WP MASIH DALAM KATEGORI AMAN / WAJAR.';
         }
 
+        updateDateTime();
     } catch(error){
-        console.error("Gagal menarik data JSON dari Google Sheet:", error);
+        console.error("Gagal memproses data Sheet:", error);
     }
 }
 
-/* FUNGSI COPY IMAGE (FIXED ANTI-TUMPUK & ANTI-POTONG) */
+/* FUNGSI SALIN GAMBAR DENGAN ATURAN PENUNDAAN SEMENTARA (ANTI-OVERLAP TEKS) */
 async function copyImage(){
     const container = document.querySelector('.report-container');
     const capture = document.getElementById('capture');
@@ -672,9 +669,10 @@ async function copyImage(){
     const computedStyle = window.getComputedStyle(container);
     const originalZoom = container.style.zoom || computedStyle.zoom || "1";
     
-    // Normalisasi skala tampilan sementara agar koordinat jepretan presisi penuh
+    // Nonaktifkan zoom sementara agar koordinat jepretan kembali murni 100%
     container.style.zoom = "1";
-    await new Promise(resolve => setTimeout(resolve, 60));
+    // Jeda 50 milidetik agar browser merender bentuk lurus murninya
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     try {
         const canvas = await html2canvas(capture, {
@@ -691,22 +689,22 @@ async function copyImage(){
                     await navigator.clipboard.write([
                         new ClipboardItem({'image/png': blob})
                     ]);
-                    alert('Sukses! Laporan Full HD berhasil disalin ke clipboard Anda.');
+                    alert('Sukses disalin ke clipboard dengan resolusi rapi!');
                 } catch (clipErr) {
-                    alert("Gagal otomatis menyalin. Izinkan akses clipboard pada browser.");
+                    alert("Gagal menyalin gambar. Berikan izin clipboard pada browser.");
                 }
             }
         }, 'image/png');
         
     } catch (error) {
-        alert("Terjadi gangguan sistem pemrosesan gambar.");
+        alert("Terjadi kesalahan sistem pengolahan gambar.");
     } finally {
-        // Kembalikan rasio layar ke bentuk semula secara otomatis
+        // Kembalikan ke rasio laptop semula secara instan
         container.style.zoom = originalZoom;
     }
 }
 
-// LOAD DATA OTOMATIS SETIAP KALI HALAMAN DIBUKA
+// JALANKAN OTOMATIS SAAT HALAMAN DIBUKA
 generateData();
 
 </script>
