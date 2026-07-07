@@ -73,6 +73,11 @@ button:hover{
     background: linear-gradient(90deg, #00a63e, #00d26a);
 }
 
+/* TOMBOL BARU UNTUK TRIGGER AUTOMA */
+.automa-btn{
+    background: linear-gradient(90deg, #6200ea, #b388ff);
+}
+
 /* CONTAINER PREVIEW PEMBATAS SKALA MONITOR */
 .report-container {
     width: 1920px;
@@ -474,6 +479,7 @@ button:hover{
 <div class="wrapper">
 
     <div class="toolbar">
+        <button class="automa-btn" onclick="triggerAutoma()">RUN AUTOMA</button>
         <button class="generate-btn" onclick="generateData()">GENERATE DATA</button>
         <button class="copy-btn" onclick="copyImage()">COPY IMAGE</button>
     </div>
@@ -750,6 +756,18 @@ async function copyImage(){
         alert("Terjadi kesalahan sistem pengolahan gambar.");
     } finally {
         container.style.zoom = originalZoom;
+    }
+}
+
+// FUNGSI PASANGAN UNTUK MEMICU EXTENSION AUTOMA LOKAL
+function triggerAutoma() {
+    if (typeof window.automaNext !== 'undefined') {
+        window.automaNext.executeWorkflow({
+            id: 'vueflow__edge-trg_qristrg_qris-output-1-newtab_scnewtab_sc-input-1'
+        });
+        console.log("Sinyal pemicu berhasil dikirim ke Automa.");
+    } else {
+        alert("Ekstensi Automa tidak terdeteksi. Buka halaman ini di browser yang memiliki ekstensi Automa aktif.");
     }
 }
 
