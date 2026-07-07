@@ -73,7 +73,7 @@ button:hover{
     background: linear-gradient(90deg, #00a63e, #00d26a);
 }
 
-/* TOMBOL BARU UNTUK TRIGGER AUTOMA */
+/* TOMBOL UNTUK TRIGGER AUTOMA */
 .automa-btn{
     background: linear-gradient(90deg, #6200ea, #b388ff);
 }
@@ -618,7 +618,6 @@ function updateDateTime(){
     document.getElementById('footerTime').innerHTML = footerString.toUpperCase();
 }
 
-// ROMBAK TOTAL: CSV Parser handal yang mengabaikan karakter koma di dalam tanda kutip ganda
 function parseCSV(text) {
     let p = '', r = [];
     let q = false;
@@ -644,7 +643,6 @@ function parseCSV(text) {
     return r;
 }
 
-// Membersihkan ribuan murni & membuang bagian pecahan desimal jika tidak sengaja tertulis .00
 function cleanCellValue(cellText) {
     if (!cellText) return 0;
     let cleanText = cellText.split('.')[0];
@@ -652,7 +650,6 @@ function cleanCellValue(cellText) {
     return Number(cleanText) || 0;
 }
 
-// Mencari baris secara dinamis agar aman dari pergeseran urutan baris manual
 function getValueByLabel(rows, labelText) {
     const target = labelText.toLowerCase().replace(/\s+/g, '');
     for (let i = 0; i < rows.length; i++) {
@@ -670,19 +667,16 @@ async function generateData(){
         const csvText = await response.text();
         const rows = parseCSV(csvText);
 
-        // Mengambil data murni berdasarkan label baris
         const B4 = getValueByLabel(rows, 'jumlah total Transaksi QRIS WP di SC=');
         const B5 = getValueByLabel(rows, 'jumlah total Amount QRIS WP di SC =');
         const B8 = getValueByLabel(rows, 'jumlah total Transaksi QRIS WP di WP=');
         const B9 = getValueByLabel(rows, 'jumlah total Amount QRIS WP di WP =');
 
-        // DISPLAY DATA UTAMA
         document.getElementById('b4').innerHTML = formatNumber(B4);
         document.getElementById('b5').innerHTML = formatCurrency(B5);
         document.getElementById('b8').innerHTML = formatNumber(B8);
         document.getElementById('b9').innerHTML = formatCurrency(B9);
 
-        // FORMULA SELISIH & PERSENTASE
         const selisihTransaksi = Math.abs(B4 - B8);
         const selisihAmount = Math.abs(B5 - B9);
         const persen = B4 > 0 ? ((selisihTransaksi / B4) * 100).toFixed(2) : 0;
@@ -691,13 +685,11 @@ async function generateData(){
         document.getElementById('selisihAmount').innerHTML = formatCurrency(selisihAmount);
         document.getElementById('persentase').innerHTML = persen + '%';
 
-        // LOGIKA KONDISI VALIDASI STATUS (PERBAIKAN TOTAL)
         const statusBox = document.getElementById('statusBox');
         const statusIcon = document.getElementById('statusIcon');
         const statusText = document.getElementById('statusText');
         const statusDesc = document.getElementById('statusDesc');
 
-        // Menggunakan kondisi angka asli
         if (Number(B8) > Number(B4) && Number(selisihTransaksi) > 20) {
             statusText.innerHTML = 'HIGH RISK';
             statusText.className = 'status-text tidakaman';
@@ -759,16 +751,18 @@ async function copyImage(){
     }
 }
 
-// FUNGSI PASANGAN UNTUK MEMICU EXTENSION AUTOMA LOKAL
+// PEMBARUAN: Memicu Automa dengan metode Custom Event (Aman & Bebas Blokir Domain)
 function triggerAutoma() {
-    if (typeof window.automaNext !== 'undefined') {
-        window.automaNext.executeWorkflow({
-            id: 'vueflow__edge-trg_qristrg_qris-output-1-newtab_scnewtab_sc-input-1'
-        });
-        console.log("Sinyal pemicu berhasil dikirim ke Automa.");
-    } else {
-        alert("Ekstensi Automa tidak terdeteksi. Buka halaman ini di browser yang memiliki ekstensi Automa aktif.");
-    }
+    // Membuat event khusus untuk dideteksi oleh ekstensi Automa
+    const event = new CustomEvent('automa:execute', {
+        detail: {
+            publicId: 'monitoring-qris' // <-- Jika Anda merubah teks di Step 1, samakan tulisan ini
+        }
+    });
+    
+    // Kirim event ke browser
+    window.dispatchEvent(event);
+    console.log("Event pemicu Automa ('monitoring-qris') berhasil ditembak.");
 }
 
 generateData();
